@@ -35,6 +35,8 @@ import (
 
 	"github.com/moby/sys/mountinfo"
 
+	"golang.org/x/sys/unix"
+
 	"k8s.io/klog/v2"
 	utilexec "k8s.io/utils/exec"
 	utilio "k8s.io/utils/io"
@@ -131,6 +133,27 @@ func (mounter *Mounter) MountSensitive(source string, target string, fstype stri
 		if err != nil {
 			return err
 		}
+		err = mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindRemountOpts, bindRemountOptsSensitive, nil /* mountFlags */, mounter.trySystemd)
+		if err == nil {
+			return nil
+		}
+		// Check if the source has ro, nodev, noexec, nosuid flag...
+		var s unix.Statfs_t
+		if err := unix.Statfs(source, &s); err != nil {
+			return &os.PathError{Op: "statfs", Path: source, Err: err}
+		}
+		// ... and retry the mount with flags found above.
+		flagMapping := map[uint32]string {
+			unix.MS_RDONLY: "ro",
+			unix.MS_NODEV:  "nodev",
+			unix.MS_NOEXEC: "noexec",
+			unix.MS_NOSUID: "nosuid",
+		}
+		for k, v := range flagMapping {
+			if s.Flags & k == k {
+				bindRemountOpts = append(bindRemountOpts, v)
+			}
+		}
 		return mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindRemountOpts, bindRemountOptsSensitive, nil /* mountFlags */, mounter.trySystemd)
 	}
 	// The list of filesystems that require containerized mounter on GCI image cluster
@@ -159,6 +182,27 @@ func (mounter *Mounter) MountSensitiveWithoutSystemdWithMountFlags(source string
 		err := mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindOpts, bindRemountOptsSensitive, mountFlags, false)
 		if err != nil {
 			return err
+		}
+		err = mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindRemountOpts, bindRemountOptsSensitive, mountFlags, false)
+		if err == nil {
+			return nil
+		}
+		// Check if the source has ro, nodev, noexec, nosuid flag...
+		var s unix.Statfs_t
+		if err := unix.Statfs(source, &s); err != nil {
+			return &os.PathError{Op: "statfs", Path: source, Err: err}
+		}
+		// ... and retry the mount with flags found above.
+		flagMapping := map[uint32]string {
+			unix.MS_RDONLY: "ro",
+			unix.MS_NODEV:  "nodev",
+			unix.MS_NOEXEC: "noexec",
+			unix.MS_NOSUID: "nosuid",
+		}
+		for k, v := range flagMapping {
+			if s.Flags & k == k {
+				bindRemountOpts = append(bindRemountOpts, v)
+			}
 		}
 		return mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindRemountOpts, bindRemountOptsSensitive, mountFlags, false)
 	}
