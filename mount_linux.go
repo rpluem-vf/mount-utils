@@ -160,7 +160,6 @@ func (mounter *Mounter) MountSensitiveWithoutSystemdWithMountFlags(source string
 		if err != nil {
 			return err
 		}
-		blah
 		return mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindRemountOpts, bindRemountOptsSensitive, mountFlags, false)
 	}
 	// The list of filesystems that require containerized mounter on GCI image cluster
