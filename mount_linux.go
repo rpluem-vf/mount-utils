@@ -143,7 +143,7 @@ func (mounter *Mounter) MountSensitive(source string, target string, fstype stri
 			return &os.PathError{Op: "statfs", Path: source, Err: err}
 		}
 		// ... and retry the mount with flags found above.
-		flagMapping := map[uint32]string {
+		flagMapping := map[int64]string {
 			unix.MS_RDONLY: "ro",
 			unix.MS_NODEV:  "nodev",
 			unix.MS_NOEXEC: "noexec",
@@ -193,7 +193,7 @@ func (mounter *Mounter) MountSensitiveWithoutSystemdWithMountFlags(source string
 			return &os.PathError{Op: "statfs", Path: source, Err: err}
 		}
 		// ... and retry the mount with flags found above.
-		flagMapping := map[uint32]string {
+		flagMapping := map[int64]string {
 			unix.MS_RDONLY: "ro",
 			unix.MS_NODEV:  "nodev",
 			unix.MS_NOEXEC: "noexec",
