@@ -111,7 +111,8 @@ func (mounter *Mounter) hasSystemd() bool {
 
 // Do a bind mount including the needed remount for applying the bind opts.
 // If the remount fails figure out if the source filesystem has the ro, nodev,
-// noexec or nosuid flag set and try another remount with the found flags.
+// noexec, nosuid, noatime, relatime or nodiratime flag set and try another
+// remount with the found flags.
 func (mounter *Mounter) BindMountSensitive(mounterPath string, mountCmd string, source string, target string, fstype string, bindOpts []string, bindRemountOpts []string, bindRemountOptsSensitive []string, mountFlags []string, systemdMountRequired bool) error {
 	err := mounter.doMount(mounterPath, defaultMountCommand, source, target, fstype, bindOpts, bindRemountOptsSensitive, mountFlags, systemdMountRequired)
 	if err != nil {
@@ -121,17 +122,21 @@ func (mounter *Mounter) BindMountSensitive(mounterPath string, mountCmd string, 
 	if err == nil {
 		return nil
 	}
-	// Check if the source has ro, nodev, noexec, nosuid flag...
+	// Check if the source has ro, nodev, noexec, nosuid, noatime, relatime,
+	// nodiratime flag...
 	var s unix.Statfs_t
 	if err := unix.Statfs(source, &s); err != nil {
 		return &os.PathError{Op: "statfs", Path: source, Err: err}
 	}
 	// ... and retry the mount with flags found above.
 	flagMapping := map[int64]string {
-		unix.MS_RDONLY: "ro",
-		unix.MS_NODEV:  "nodev",
-		unix.MS_NOEXEC: "noexec",
-		unix.MS_NOSUID: "nosuid",
+		unix.MS_RDONLY:     "ro",
+		unix.MS_NODEV:      "nodev",
+		unix.MS_NOEXEC:     "noexec",
+		unix.MS_NOSUID:     "nosuid",
+		unix.MS_NOATIME:    "noatime",
+		unix.MS_RELATIME:   "relatime",
+		unix.MS_NODIRATIME: "nodiratime",
 	}
 	for k, v := range flagMapping {
 		if s.Flags & k == k {
